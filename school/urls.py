@@ -20,3 +20,4 @@ urlpatterns = [
 
     path('payments/', PaymentsListAPIView.as_view(), name='payments_list'),
 ] + router.urls
+
