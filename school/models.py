@@ -1,3 +1,4 @@
+from django.conf import settings
 from django.db import models
 
 from users.models import NULLABLE, User
@@ -7,6 +8,8 @@ class Course(models.Model):
     title = models.CharField(max_length=250, verbose_name='название')
     description = models.TextField(verbose_name='описание', **NULLABLE)
     preview = models.ImageField(upload_to='course/', **NULLABLE, verbose_name='изображение')
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+                              verbose_name='создатель')
 
     def __str__(self):
         return f'{self.title}'
@@ -22,6 +25,8 @@ class Lesson(models.Model):
     preview = models.ImageField(upload_to='lesson/', **NULLABLE, verbose_name='изображение')
     video = models.CharField(max_length=250, **NULLABLE, verbose_name='ссылка на видео')
     course = models.ForeignKey(Course, on_delete=models.CASCADE, verbose_name='курс', related_name='lesson')
+    creator = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, null=True, blank=True,
+                                verbose_name='создатель')
 
     def __str__(self):
         return f'{self.title}'
@@ -44,3 +49,10 @@ class Payments(models.Model):
 
     money = models.PositiveIntegerField(verbose_name='сумма оплаты')
     method = models.CharField(default='наличные', max_length=30, choices=payment_method, verbose_name='метод оплаты')
+
+    def __str__(self):
+        return f'{self.data} {self.money} ({self.user})'
+
+    class Meta:
+        verbose_name = 'платёж'
+        verbose_name_plural = 'платежи'
