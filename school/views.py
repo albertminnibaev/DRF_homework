@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 
 from school.models import Course, Lesson, Payments
-from school.permissions import IsCreator
+from school.permissions import IsCreator, IsRetrieveCreator
 from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer
 from users.permissions import IsModerator
 
@@ -40,6 +40,8 @@ class CourseViewSet(viewsets.ModelViewSet):
             return [IsCreator()]
         if self.action in ['list']:
             return [IsAuthenticated()]
+        if self.action in ['retrieve']:
+            return [IsRetrieveCreator()]
         # if self.action in ['retrieve', 'update', 'partial_update']:
         #     return [((IsAuthenticated & IsModerator) | (IsAuthenticated & IsCreator))()]
 

@@ -9,3 +9,12 @@ class IsCreator(BasePermission):
         if request.user == obj.creator:
             return True
         return False
+
+
+class IsRetrieveCreator(BasePermission):
+    message = "Вы не являетесь создателем"
+
+    def has_permission(self, request, view):
+        if request.user == view.get_object().creator:
+            return True
+        return False
