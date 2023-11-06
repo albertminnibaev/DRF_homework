@@ -2,22 +2,34 @@ from django.shortcuts import render, get_object_or_404
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework import viewsets, generics, status
 from rest_framework.filters import OrderingFilter, SearchFilter
-from rest_framework.permissions import IsAuthenticated
+from rest_framework.permissions import IsAuthenticated, AllowAny
 from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 
-from school.models import Course, Lesson, Payments
+from school.models import Course, Lesson, Payments, Subscription
+from school.paginators import CoursePaginator, LessonPaginator
 from school.permissions import IsCreator, IsRetrieveCreator
-from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer
+from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer, \
+    SubscriptionSerializer
+from school.services import send_order_email, send_order_email_subscription_active, \
+    send_order_email_subscription_deactive
 from users.permissions import IsModerator
 
 
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     queryset = Course.objects.all()
+    pagination_class = CoursePaginator
 
     def list(self, request, *args, **kwargs):
         queryset = Course.objects.all()
+
+        # данный код необходим для того чтобы работала пагинация
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = CourseListSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -32,6 +44,14 @@ class CourseViewSet(viewsets.ModelViewSet):
         new_lesson = serializer.save()
         new_lesson.creator = self.request.user
         new_lesson.save()
+
+    def partial_update(self, request, *args, **kwargs):
+        kwargs['partial'] = True
+
+        # функция рассылки писем всем кто подписан на курс, при обновлении курса
+        send_order_email(self.kwargs['pk'])
+
+        return self.update(request, *args, **kwargs)
 
     def get_permissions(self):
         if self.action in ['create']:
@@ -61,6 +81,7 @@ class LessonCreateAPIView(generics.CreateAPIView):
 class LessonListAPIView(generics.ListAPIView):
     serializer_class = LessonSerializer
     queryset = Lesson.objects.all()
+    pagination_class = LessonPaginator
     permission_classes = [IsAuthenticated]
 
 
@@ -88,3 +109,26 @@ class PaymentsListAPIView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ('course', 'lesson', 'method')
     ordering_fields = ('data',)
+
+
+class SubscriptionCreateAPIView(generics.CreateAPIView):
+    serializer_class = SubscriptionSerializer
+    queryset = Subscription.objects.all()
+
+    def perform_create(self, serializer):
+        new_subscription = serializer.save()
+        new_subscription.subscriber = self.request.user
+
+        send_order_email_subscription_active(self.request.user.email, new_subscription.course.title)
+
+        new_subscription.save()
+
+
+class SubscriptionDestroyApiView(generics.DestroyAPIView):
+    queryset = Subscription.objects.all()
+
+    def delete(self, request, *args, **kwargs):
+
+        send_order_email_subscription_deactive(self.request.user.email, self.kwargs['pk'])
+
+        return self.destroy(request, *args, **kwargs)
