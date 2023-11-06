@@ -7,6 +7,7 @@ from rest_framework.response import Response
 from rest_framework.decorators import api_view, permission_classes
 
 from school.models import Course, Lesson, Payments, Subscription
+from school.paginators import CoursePaginator, LessonPaginator
 from school.permissions import IsCreator, IsRetrieveCreator
 from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer, \
     SubscriptionSerializer
@@ -18,9 +19,17 @@ from users.permissions import IsModerator
 class CourseViewSet(viewsets.ModelViewSet):
     serializer_class = CourseSerializer
     queryset = Course.objects.all()
+    pagination_class = CoursePaginator
 
     def list(self, request, *args, **kwargs):
         queryset = Course.objects.all()
+
+        # данный код необходим для того чтобы работала пагинация
+        page = self.paginate_queryset(queryset)
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+
         serializer = CourseListSerializer(queryset, many=True)
         return Response(serializer.data)
 
@@ -72,6 +81,7 @@ class LessonCreateAPIView(generics.CreateAPIView):
 class LessonListAPIView(generics.ListAPIView):
     serializer_class = LessonSerializer
     queryset = Lesson.objects.all()
+    pagination_class = LessonPaginator
     permission_classes = [IsAuthenticated]
 
 
