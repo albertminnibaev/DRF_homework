@@ -2,6 +2,8 @@ from django.conf import settings
 from django.core.mail import send_mail
 
 from school.models import Course, Subscription
+import stripe
+import os
 
 
 # Рассылка писем пользователям при обновлении курса
@@ -47,3 +49,33 @@ def send_order_email_subscription_deactive(email, pk):
         recipient_list=[email]
         #recipient_list=['albert.minnibaeff@yandex.ru']
     )
+
+
+# Функция для получения URL адреса для оплаты
+def payments_url(obj):
+
+    stripe.api_key = os.getenv("STRIPE_API_KEY") #sk_test_4eC39HqLyjWDarjtT1zdp7dc"
+
+    product = stripe.Product.create(name=obj.course.title)
+
+    price = stripe.Price.create(
+        unit_amount=obj.money,
+        currency="usd",
+        #recurring={"interval": "month"}, # для периодической оплаты, тогда нужно указать mode="payment" в платеже
+        product=product['id'],
+        #product="prod_OyEFWEJxeuj4kp",
+    )
+
+    paiment = stripe.checkout.Session.create(
+        success_url="https://example.com/success",
+        line_items=[
+            {
+                "price": price['id'],
+                "quantity": 1,
+            },
+        ],
+        mode="payment", # для периодической оплаты, тогда нужно указать mode="payment" в платеже
+        #mode="subscription",  # для периодической оплаты при recurring={"interval": "month"} в цене
+    )
+
+    return paiment['url']

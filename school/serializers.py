@@ -1,6 +1,7 @@
 from rest_framework import serializers
 
 from school.models import Course, Lesson, Payments, Subscription
+from school.services import payments_url
 from school.validators import VideoValidator
 
 
@@ -17,6 +18,17 @@ class PaymentsSerializer(serializers.ModelSerializer):
     class Meta:
         model = Payments
         fields = '__all__'
+
+
+class PaymentsCreateSerializer(serializers.ModelSerializer):
+    payments_url = serializers.SerializerMethodField(read_only=True)
+
+    class Meta:
+        model = Payments
+        fields = '__all__'
+
+    def get_payments_url(self, instance):
+        return payments_url(instance)
 
 
 class CourseSerializer(serializers.ModelSerializer):
