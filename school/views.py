@@ -10,7 +10,7 @@ from school.models import Course, Lesson, Payments, Subscription
 from school.paginators import CoursePaginator, LessonPaginator
 from school.permissions import IsCreator, IsRetrieveCreator
 from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer, \
-    SubscriptionSerializer
+    SubscriptionSerializer, PaymentsCreateSerializer
 from school.services import send_order_email, send_order_email_subscription_active, \
     send_order_email_subscription_deactive
 from users.permissions import IsModerator
@@ -109,6 +109,10 @@ class PaymentsListAPIView(generics.ListAPIView):
     filter_backends = [DjangoFilterBackend, OrderingFilter]
     filterset_fields = ('course', 'lesson', 'method')
     ordering_fields = ('data',)
+
+
+class PaymentsCreateAPIView(generics.CreateAPIView):
+    serializer_class = PaymentsCreateSerializer
 
 
 class SubscriptionCreateAPIView(generics.CreateAPIView):
