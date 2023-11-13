@@ -11,8 +11,9 @@ from school.paginators import CoursePaginator, LessonPaginator
 from school.permissions import IsCreator, IsRetrieveCreator
 from school.serializers import CourseSerializer, LessonSerializer, CourseListSerializer, PaymentsSerializer, \
     SubscriptionSerializer, PaymentsCreateSerializer
-from school.services import send_order_email, send_order_email_subscription_active, \
-    send_order_email_subscription_deactive
+from school.tasks import send_order_email, send_order_email_subscription_active, send_order_email_subscription_deactive
+#from school.services import send_order_email, send_order_email_subscription_active, \
+#    send_order_email_subscription_deactive
 from users.permissions import IsModerator
 
 
@@ -49,7 +50,7 @@ class CourseViewSet(viewsets.ModelViewSet):
         kwargs['partial'] = True
 
         # функция рассылки писем всем кто подписан на курс, при обновлении курса
-        send_order_email(self.kwargs['pk'])
+        send_order_email.delay(self.kwargs['pk'])
 
         return self.update(request, *args, **kwargs)
 
@@ -123,7 +124,7 @@ class SubscriptionCreateAPIView(generics.CreateAPIView):
         new_subscription = serializer.save()
         new_subscription.subscriber = self.request.user
 
-        send_order_email_subscription_active(self.request.user.email, new_subscription.course.title)
+        send_order_email_subscription_active.delay(self.request.user.email, new_subscription.course.title)
 
         new_subscription.save()
 
@@ -133,6 +134,6 @@ class SubscriptionDestroyApiView(generics.DestroyAPIView):
 
     def delete(self, request, *args, **kwargs):
 
-        send_order_email_subscription_deactive(self.request.user.email, self.kwargs['pk'])
+        send_order_email_subscription_deactive.delay(self.request.user.email, self.kwargs['pk'])
 
         return self.destroy(request, *args, **kwargs)
